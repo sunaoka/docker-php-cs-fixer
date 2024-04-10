@@ -1,4 +1,4 @@
-VERSION := 3.52.1
+VERSION := 3.53.0
 
 IMAGE := sunaoka/php-cs-fixer
 
@@ -15,7 +15,7 @@ setup:
 
 build: setup
 	docker buildx use $(BUILDER)
-	docker buildx build --platform $(PLATFORM) $(BUILDER_ARGS) --push .
+	docker buildx build --rm --no-cache --platform $(PLATFORM) $(BUILDER_ARGS) --push .
 	docker buildx rm $(BUILDER)
 
 .PHONY: all setup build
