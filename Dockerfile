@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM php:8.3.6-cli-alpine AS base
+FROM --platform=$BUILDPLATFORM php:8.3.7-cli-alpine AS base
 
 ARG VERSION
 
