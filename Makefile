@@ -6,7 +6,7 @@ PLATFORM := linux/arm64,linux/amd64
 
 BUILDER := docker-php-cs-fixer-builder
 
-BUILDER_ARGS := --build-arg VERSION=$(VERSION) -t $(IMAGE):latest -t $(IMAGE):$(VERSION)
+BUILDER_ARGS := --build-arg VERSION=$(VERSION) -t $(IMAGE):$(VERSION) -t $(IMAGE):latest
 
 all: build
 
