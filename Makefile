@@ -1,4 +1,4 @@
-VERSION := 3.63.1
+VERSION := 3.63.2
 
 IMAGE := sunaoka/php-cs-fixer
 
