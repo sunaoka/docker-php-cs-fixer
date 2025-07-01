@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1.4
-FROM --platform=$BUILDPLATFORM php:8.3.19-cli-alpine AS base
+FROM --platform=$BUILDPLATFORM php:8.3.22-cli-alpine AS base
 
 ARG VERSION
 
-RUN <<EOT sh -ex
+RUN <<'EOT' sh -ex
   curl -f -o /usr/bin/php-cs-fixer -LO "https://github.com/PHP-CS-Fixer/PHP-CS-Fixer/releases/download/v${VERSION}/php-cs-fixer.phar"
   chmod +x /usr/bin/php-cs-fixer
 EOT
