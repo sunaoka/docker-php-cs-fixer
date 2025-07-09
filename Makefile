@@ -1,4 +1,4 @@
-VERSION := 3.82.0
+VERSION := 3.82.2
 
 IMAGE := sunaoka/php-cs-fixer
 
@@ -18,4 +18,14 @@ build: setup
 	docker buildx build --rm --no-cache --platform $(PLATFORM) $(BUILDER_ARGS) --push .
 	docker buildx rm $(BUILDER)
 
-.PHONY: all setup build
+release:
+	git checkout develop
+	git add .
+	git commit -m "Bump to v$(VERSION)"
+	git checkout main
+	git merge develop --no-ff -m "Merge develop into main for v$(VERSION)"
+	git tag -a v$(VERSION) -m "Release v$(VERSION)"
+	git checkout develop
+	git push origin main develop --tags
+
+.PHONY: all setup build release
