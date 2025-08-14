@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.4
-FROM --platform=$BUILDPLATFORM php:8.4.10-cli-alpine AS base
+FROM --platform=$BUILDPLATFORM php:8.4.11-cli-alpine AS base
 
 ARG VERSION
 
