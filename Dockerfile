@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # check=error=true
-FROM --platform=$BUILDPLATFORM php:8.4.22-cli-alpine AS base
+FROM --platform=$BUILDPLATFORM php:8.4.23-cli-alpine AS base
 
 ARG VERSION
 
