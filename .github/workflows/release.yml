@@ -1,0 +1,108 @@
+name: Release PHP Coding Standards Fixer image
+
+on:
+  schedule:
+    - cron: "37 2 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: php-cs-fixer-release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GHCR_IMAGE: ghcr.io/sunaoka/docker-php-cs-fixer
+      DOCKER_IMAGE: sunaoka/php-cs-fixer
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Find the latest PHP-CS-Fixer 3.x release
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          current=$(git tag --list 'v3.*' | sed -nE 's/^v(3\.[0-9]+\.[0-9]+)$/\1/p' | sort -V | tail -n 1)
+          latest=$(gh release view --repo PHP-CS-Fixer/PHP-CS-Fixer --json tagName --jq '.tagName | ltrimstr("v")')
+          [[ "$current" =~ ^3\.[0-9]+\.[0-9]+$ ]]
+          [[ "$latest" =~ ^3\.[0-9]+\.[0-9]+$ ]]
+          if dpkg --compare-versions "$latest" gt "$current"; then
+            echo "version=$latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check release tag
+        if: steps.version.outputs.version != ''
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -eu
+          existing_tag="$(git ls-remote origin "refs/tags/v${VERSION}")"
+          if [ -n "$existing_tag" ]; then
+            echo "Release tag v${VERSION} already exists" >&2
+            exit 1
+          fi
+
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        if: steps.version.outputs.version != ''
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        if: steps.version.outputs.version != ''
+      - name: Build both architectures
+        if: steps.version.outputs.version != ''
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          for platform in linux/amd64 linux/arm64; do
+            docker buildx build --platform "$platform" --build-arg "VERSION=$VERSION" --pull --load -t php-cs-fixer-test .
+            docker run --platform "$platform" --rm php-cs-fixer-test --version | grep -F "$VERSION"
+          done
+
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        if: steps.version.outputs.version != ''
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        if: steps.version.outputs.version != ''
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish image
+        if: steps.version.outputs.version != ''
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          build-args: VERSION=${{ steps.version.outputs.version }}
+          push: true
+          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          tags: |
+            ${{ env.DOCKER_IMAGE }}:${{ steps.version.outputs.version }}
+            ${{ env.DOCKER_IMAGE }}:3
+            ${{ env.DOCKER_IMAGE }}:latest
+            ${{ env.GHCR_IMAGE }}:${{ steps.version.outputs.version }}
+            ${{ env.GHCR_IMAGE }}:3
+            ${{ env.GHCR_IMAGE }}:latest
+
+      - name: Push release tag
+        if: steps.version.outputs.version != ''
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -eu
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -a "v${VERSION}" -m "Release v${VERSION}"
+          git push origin "refs/tags/v${VERSION}"
